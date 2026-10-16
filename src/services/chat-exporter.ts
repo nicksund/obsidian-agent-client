@@ -322,16 +322,14 @@ session_id: ${sessionId}${tagsLine}
 			const timeStr = message.timestamp.toLocaleTimeString();
 			const role = message.role === "user" ? "User" : "Assistant";
 
-			markdown += `## ${timeStr} - ${role}\n\n`;
-
+			let body = "";
 			for (const content of message.content) {
-				markdown += await this.convertContentToMarkdown(
-					content,
-					context,
-				);
+				body += await this.convertContentToMarkdown(content, context);
 			}
+			// Skip messages that only held thinking or tool calls
+			if (!body.trim()) continue;
 
-			markdown += "\n---\n\n";
+			markdown += `## ${timeStr} - ${role}\n\n` + body + "\n---\n\n";
 		}
 
 		return markdown;
@@ -362,11 +360,10 @@ session_id: ${sessionId}${tagsLine}
 				return exportText;
 			}
 
+			// Thinking and tool calls are left out of exports
 			case "agent_thought":
-				return `> [!info]- Thinking\n> ${content.text.split("\n").join("\n> ")}\n\n`;
-
 			case "tool_call":
-				return this.convertToolCallToMarkdown(content, context);
+				return "";
 
 			case "terminal":
 				return `### 🖥️ Terminal: ${content.terminalId.slice(0, 8)}\n\n`;

@@ -22,6 +22,7 @@ import { ChatPanel, type ChatPanelCallbacks } from "./ChatPanel";
 
 // Service imports
 import { VaultService } from "../services/vault-service";
+import { focusChatInput } from "./ChatInputEditor";
 
 export const VIEW_TYPE_CHAT = "agent-client-chat-view";
 
@@ -264,16 +265,11 @@ export class ChatView extends ItemView implements IChatViewContainer {
 	/**
 	 * Programmatically focus this view's input.
 	 * Reveals the leaf first so that Obsidian switches to this tab
-	 * before focusing the textarea (required for sidebar tabs).
+	 * before focusing the input (required for sidebar tabs).
 	 */
 	focus(): void {
 		void this.app.workspace.revealLeaf(this.leaf).then(() => {
-			const textarea = this.containerEl.querySelector(
-				"textarea.agent-client-chat-input-textarea",
-			);
-			if (textarea instanceof HTMLTextAreaElement) {
-				textarea.focus();
-			}
+			focusChatInput(this.containerEl);
 		});
 	}
 

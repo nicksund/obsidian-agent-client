@@ -26,6 +26,7 @@ import { getLogger } from "../utils/logger";
 import type { ErrorInfo } from "../types/errors";
 import type { AgentUpdateNotification } from "../services/update-checker";
 import { useSettings } from "../hooks/useSettings";
+import { ChatInputEditor, type ChatInputHandle } from "./ChatInputEditor";
 
 // ============================================================================
 // Image Constants
@@ -65,8 +66,8 @@ function useInputHistory(
 	onInputChange: (value: string) => void,
 ): {
 	handleHistoryKeyDown: (
-		e: React.KeyboardEvent,
-		textareaEl: HTMLTextAreaElement | null,
+		e: KeyboardEvent,
+		input: ChatInputHandle | null,
 	) => boolean;
 	resetHistory: () => void;
 } {
@@ -88,12 +89,9 @@ function useInputHistory(
 	}, [messages]);
 
 	const handleHistoryKeyDown = useCallback(
-		(
-			e: React.KeyboardEvent,
-			textareaEl: HTMLTextAreaElement | null,
-		): boolean => {
-			if (!textareaEl) return false;
-			if (e.nativeEvent.isComposing) return false;
+		(e: KeyboardEvent, input: ChatInputHandle | null): boolean => {
+			if (!input) return false;
+			if (e.isComposing) return false;
 			if (userMessages.length === 0) return false;
 
 			// Exit history mode if user edited text or moved cursor
@@ -102,7 +100,7 @@ function useInputHistory(
 					e.key === "ArrowLeft" ||
 					e.key === "ArrowRight" ||
 					(restoredTextRef.current !== null &&
-						textareaEl.value !== restoredTextRef.current)
+						input.getValue() !== restoredTextRef.current)
 				) {
 					historyIndexRef.current = -1;
 					restoredTextRef.current = null;
@@ -112,7 +110,7 @@ function useInputHistory(
 
 			if (e.key === "ArrowUp") {
 				if (
-					textareaEl.value.trim() !== "" &&
+					input.getValue().trim() !== "" &&
 					historyIndexRef.current === -1
 				)
 					return false;
@@ -130,10 +128,7 @@ function useInputHistory(
 				restoredTextRef.current = messageText;
 				onInputChange(messageText);
 
-				window.setTimeout(() => {
-					textareaEl.selectionStart = messageText.length;
-					textareaEl.selectionEnd = messageText.length;
-				}, 0);
+				window.setTimeout(() => input.setCursor(messageText.length), 0);
 
 				return true;
 			}
@@ -156,10 +151,10 @@ function useInputHistory(
 					restoredTextRef.current = messageText;
 					onInputChange(messageText);
 
-					window.setTimeout(() => {
-						textareaEl.selectionStart = messageText.length;
-						textareaEl.selectionEnd = messageText.length;
-					}, 0);
+					window.setTimeout(
+						() => input.setCursor(messageText.length),
+						0,
+					);
 				}
 
 				return true;
@@ -334,7 +329,7 @@ export function InputArea({
 	);
 
 	// Refs
-	const textareaRef = useRef<HTMLTextAreaElement>(null);
+	const editorRef = useRef<ChatInputHandle>(null);
 	const dragCounterRef = useRef(0);
 
 	// Clear attached files when agent changes
@@ -373,7 +368,7 @@ export function InputArea({
 	const removeFile = useCallback(
 		(id: string) => {
 			onAttachedFilesChange(attachedFiles.filter((f) => f.id !== id));
-			textareaRef.current?.focus();
+			editorRef.current?.focus();
 		},
 		[attachedFiles, onAttachedFilesChange],
 	);
@@ -465,7 +460,7 @@ export function InputArea({
 	 * Non-image files are sent as resource_link.
 	 */
 	const handlePaste = useCallback(
-		async (e: React.ClipboardEvent) => {
+		async (e: ClipboardEvent) => {
 			const items = e.clipboardData?.items;
 			if (!items) return;
 
@@ -634,13 +629,8 @@ export function InputArea({
 
 			// Set cursor position to end of text
 			window.setTimeout(() => {
-				const textarea = textareaRef.current;
-				if (textarea) {
-					const cursorPos = newText.length;
-					textarea.selectionStart = cursorPos;
-					textarea.selectionEnd = cursorPos;
-					textarea.focus();
-				}
+				editorRef.current?.setCursor(newText.length);
+				editorRef.current?.focus();
 			}, 0);
 		},
 		[onInputChange],
@@ -678,59 +668,14 @@ export function InputArea({
 
 			// Place cursor right after command name (before hint text)
 			window.setTimeout(() => {
-				const textarea = textareaRef.current;
-				if (textarea) {
-					const cursorPos = command.hint
-						? `/${command.name} `.length
-						: newText.length;
-					textarea.selectionStart = cursorPos;
-					textarea.selectionEnd = cursorPos;
-					textarea.focus();
-				}
+				editorRef.current?.setCursor(
+					command.hint ? `/${command.name} `.length : newText.length,
+				);
+				editorRef.current?.focus();
 			}, 0);
 		},
 		[slashCommands, inputValue, onInputChange],
 	);
-
-	/**
-	 * Adjust textarea height based on content.
-	 */
-	const adjustTextareaHeight = useCallback(() => {
-		const textarea = textareaRef.current;
-		if (textarea) {
-			// Remove previous dynamic height classes
-			textarea.classList.remove(
-				"agent-client-textarea-auto-height",
-				"agent-client-textarea-expanded",
-			);
-
-			// Temporarily use auto to measure
-			textarea.classList.add("agent-client-textarea-auto-height");
-			const scrollHeight = textarea.scrollHeight;
-			const minHeight = 80;
-			const maxHeight = 300;
-
-			// Calculate height
-			const calculatedHeight = Math.max(
-				minHeight,
-				Math.min(scrollHeight, maxHeight),
-			);
-
-			// Apply expanded class if needed
-			if (calculatedHeight > minHeight) {
-				textarea.classList.add("agent-client-textarea-expanded");
-				// Set CSS variable for dynamic height
-				textarea.style.setProperty(
-					"--textarea-height",
-					`${calculatedHeight}px`,
-				);
-			} else {
-				textarea.style.removeProperty("--textarea-height");
-			}
-
-			textarea.classList.remove("agent-client-textarea-auto-height");
-		}
-	}, []);
 
 	/**
 	 * Handle sending or stopping based on current state.
@@ -772,7 +717,7 @@ export function InputArea({
 	 * Handle dropdown keyboard navigation.
 	 */
 	const handleDropdownKeyPress = useCallback(
-		(e: React.KeyboardEvent): boolean => {
+		(e: KeyboardEvent): boolean => {
 			const isSlashCommandActive = slashCommands.isOpen;
 			const isMentionActive = mentions.isOpen;
 
@@ -804,7 +749,7 @@ export function InputArea({
 			// Select item (Enter or Tab)
 			if (e.key === "Enter" || e.key === "Tab") {
 				// Skip Enter during IME composition (allow Tab to still work)
-				if (e.key === "Enter" && e.nativeEvent.isComposing) {
+				if (e.key === "Enter" && e.isComposing) {
 					return false;
 				}
 				e.preventDefault();
@@ -848,26 +793,23 @@ export function InputArea({
 			isRestoringSession);
 
 	/**
-	 * Handle keyboard events in the textarea.
+	 * Handle keyboard events in the input.
 	 */
 	const handleKeyDown = useCallback(
-		(e: React.KeyboardEvent) => {
+		(e: KeyboardEvent) => {
 			// Handle dropdown navigation first
 			if (handleDropdownKeyPress(e)) {
 				return;
 			}
 
 			// Handle input history navigation (ArrowUp/ArrowDown)
-			if (handleHistoryKeyDown(e, textareaRef.current)) {
+			if (handleHistoryKeyDown(e, editorRef.current)) {
 				return;
 			}
 
 			// Normal input handling - check if should send based on shortcut setting
 			const hasCmdCtrl = e.metaKey || e.ctrlKey;
-			if (
-				e.key === "Enter" &&
-				(!e.nativeEvent.isComposing || hasCmdCtrl)
-			) {
+			if (e.key === "Enter" && (!e.isComposing || hasCmdCtrl)) {
 				const shouldSend =
 					settings.sendMessageShortcut === "enter"
 						? !e.shiftKey // Enter mode: send unless Shift is pressed
@@ -893,13 +835,10 @@ export function InputArea({
 	);
 
 	/**
-	 * Handle input changes in the textarea.
+	 * Handle input changes in the editor.
 	 */
 	const handleInputChange = useCallback(
-		(e: React.ChangeEvent<HTMLTextAreaElement>) => {
-			const newValue = e.target.value;
-			const cursorPosition = e.target.selectionStart || 0;
-
+		(newValue: string, cursorPosition: number) => {
 			onInputChange(newValue);
 
 			// Hide hint overlay when user modifies the input
@@ -920,18 +859,9 @@ export function InputArea({
 		[logger, hintText, commandText, mentions, slashCommands, onInputChange],
 	);
 
-	// Adjust textarea height when input changes
+	// Auto-focus input on mount
 	useEffect(() => {
-		adjustTextareaHeight();
-	}, [inputValue, adjustTextareaHeight]);
-
-	// Auto-focus textarea on mount
-	useEffect(() => {
-		window.setTimeout(() => {
-			if (textareaRef.current) {
-				textareaRef.current.focus();
-			}
-		}, 0);
+		window.setTimeout(() => editorRef.current?.focus(), 0);
 	}, []);
 
 	// Restore message when provided (e.g., after cancellation)
@@ -942,13 +872,8 @@ export function InputArea({
 				onInputChange(restoredMessage);
 				// Focus and place cursor at end
 				window.setTimeout(() => {
-					if (textareaRef.current) {
-						textareaRef.current.focus();
-						textareaRef.current.selectionStart =
-							restoredMessage.length;
-						textareaRef.current.selectionEnd =
-							restoredMessage.length;
-					}
+					editorRef.current?.setCursor(restoredMessage.length);
+					editorRef.current?.focus();
 				}, 0);
 			}
 			onRestoredMessageConsumed();
@@ -1077,33 +1002,17 @@ export function InputArea({
 					</button>
 				)}
 
-				{/* Textarea with Hint Overlay */}
-				<div className="agent-client-textarea-wrapper">
-					<textarea
-						ref={textareaRef}
-						value={inputValue}
-						onChange={handleInputChange}
-						onKeyDown={handleKeyDown}
-						onPaste={(e) => void handlePaste(e)}
-						placeholder={placeholder}
-						className={`agent-client-chat-input-textarea ${mentions.activeNote ? "has-auto-mention" : ""}`}
-						rows={1}
-						spellCheck={obsidianSpellcheck}
-					/>
-					{hintText && (
-						<div
-							className="agent-client-hint-overlay"
-							aria-hidden="true"
-						>
-							<span className="agent-client-invisible">
-								{commandText}
-							</span>
-							<span className="agent-client-hint-text">
-								{hintText}
-							</span>
-						</div>
-					)}
-				</div>
+				{/* Editor (the slash command hint renders inside it) */}
+				<ChatInputEditor
+					ref={editorRef}
+					value={inputValue}
+					placeholder={placeholder}
+					spellcheck={obsidianSpellcheck}
+					hint={hintText}
+					onChange={handleInputChange}
+					onKeyDown={handleKeyDown}
+					onPaste={(e) => void handlePaste(e)}
+				/>
 
 				{/* Attachment Preview Strip (images + file references) */}
 				<AttachmentStrip files={attachedFiles} onRemove={removeFile} />

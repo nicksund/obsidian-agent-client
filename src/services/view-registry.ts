@@ -90,7 +90,7 @@ export interface IChatViewContainer {
 
 	/**
 	 * Programmatically focus this view's input.
-	 * Should focus the chat input textarea.
+	 * Should focus the chat input.
 	 * For floating views, this also expands the window if collapsed.
 	 */
 	focus(): void;

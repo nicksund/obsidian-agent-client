@@ -14,6 +14,7 @@ import type {
 	SessionStatus,
 } from "../services/view-registry";
 import type { ChatInputState } from "../types/chat";
+import { focusChatInput } from "./ChatInputEditor";
 
 export interface CodeBlockMountContext {
 	sourcePath: string;
@@ -199,7 +200,7 @@ export class EmbeddedChatViewContainer implements IChatViewContainer {
 	focus(): void {
 		// The block can be registered yet invisible: its host note may sit in
 		// a background tab (switching notes does NOT unmount embedded blocks).
-		// Reveal the hosting leaf first — scrollIntoView and textarea.focus()
+		// Reveal the hosting leaf first — scrollIntoView and focusing the input
 		// are no-ops on a hidden container — mirroring ChatView.focus()'s
 		// revealLeaf and FloatingViewContainer.focus()'s expand.
 		const hostLeaf = this.findHostLeaf();
@@ -207,7 +208,7 @@ export class EmbeddedChatViewContainer implements IChatViewContainer {
 			void this.plugin.app.workspace.revealLeaf(hostLeaf).then(() => {
 				// The re-shown view re-attaches pruned sections with a delay
 				// that is not observable up front (one frame is measurably too
-				// short: focus() on a detached textarea is a silent no-op).
+				// short: focusing a detached input is a silent no-op).
 				// Wait per frame, bounded, until the block is back in the DOM.
 				this.scrollAndFocusInputWhenConnected();
 			});
@@ -260,12 +261,7 @@ export class EmbeddedChatViewContainer implements IChatViewContainer {
 	private scrollAndFocusInput(): void {
 		this.containerEl.scrollIntoView({ block: "nearest" });
 		window.requestAnimationFrame(() => {
-			const textarea = this.containerEl.querySelector(
-				"textarea.agent-client-chat-input-textarea",
-			);
-			if (textarea instanceof HTMLTextAreaElement) {
-				textarea.focus();
-			}
+			focusChatInput(this.containerEl);
 		});
 	}
 

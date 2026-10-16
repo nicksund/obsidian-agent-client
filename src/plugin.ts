@@ -65,6 +65,7 @@ import {
 } from "./types/agent";
 import type { SavedSessionInfo } from "./types/session";
 import { initializeLogger, getLogger } from "./utils/logger";
+import { focusChatInput } from "./ui/ChatInputEditor";
 
 // Re-export for backward compatibility
 export type { AgentEnvVar, PresetAgentUserSettings, CustomAgentSettings };
@@ -663,18 +664,13 @@ export default class AgentClientPlugin extends Plugin {
 	}
 
 	/**
-	 * Focus the textarea in a ChatView leaf.
+	 * Focus the chat input in a ChatView leaf.
 	 */
 	private focusTextarea(leaf: WorkspaceLeaf): void {
 		const viewContainerEl = leaf.view?.containerEl;
 		if (viewContainerEl) {
 			window.setTimeout(() => {
-				const textarea = viewContainerEl.querySelector(
-					"textarea.agent-client-chat-input-textarea",
-				);
-				if (textarea instanceof HTMLTextAreaElement) {
-					textarea.focus();
-				}
+				focusChatInput(viewContainerEl);
 			}, 50);
 		}
 	}
@@ -774,16 +770,11 @@ export default class AgentClientPlugin extends Plugin {
 		const view = leaf.view as ChatView | null;
 		const viewId = view?.viewId ?? null;
 
-		// Focus textarea after revealing the leaf
+		// Focus input after revealing the leaf
 		const viewContainerEl = leaf.view?.containerEl;
 		if (viewContainerEl) {
 			window.setTimeout(() => {
-				const textarea = viewContainerEl.querySelector(
-					"textarea.agent-client-chat-input-textarea",
-				);
-				if (textarea instanceof HTMLTextAreaElement) {
-					textarea.focus();
-				}
+				focusChatInput(viewContainerEl);
 			}, 0);
 		}
 		return viewId;

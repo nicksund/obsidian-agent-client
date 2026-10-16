@@ -1065,83 +1065,87 @@ If your plugin does not need CSS, delete this file.
 	color: var(--interactive-accent);
 }
 
-.agent-client-chat-input-textarea {
-	width: 100%;
-	padding: 12px;
-	border: none;
-	background-color: transparent;
-	color: var(--text-normal);
-	resize: none;
-	min-height: 80px;
+/* Chat input editor (CodeMirror). Selectors carry three classes to beat
+   CodeMirror's base theme, which loads after this stylesheet. */
+.agent-client-chat-input-editor {
+	flex: 1;
+	min-width: 0;
+}
+
+.agent-client-chat-input-editor .cm-editor {
 	max-height: 300px;
+	color: var(--text-normal);
+	background-color: transparent;
+}
+
+.agent-client-chat-input-editor .cm-editor.cm-focused {
+	outline: none;
+}
+
+.agent-client-chat-input-editor .cm-editor .cm-scroller {
 	font-family: inherit;
 	font-size: var(--ac-chat-font-size);
 	line-height: var(--line-height-normal);
-	box-sizing: border-box;
-	outline: none;
 	overflow-y: auto;
 	scrollbar-width: none;
-	-ms-overflow-style: none;
 }
 
-.agent-client-chat-input-textarea::-webkit-scrollbar {
+.agent-client-chat-input-editor .cm-editor .cm-scroller::-webkit-scrollbar {
 	display: none;
 }
 
-.agent-client-chat-input-textarea:hover {
-	border: none !important;
-	background-color: transparent !important;
-}
-
-.agent-client-chat-input-textarea:focus {
-	border: none !important;
-	outline: none !important;
-	box-shadow: none !important;
-}
-
-/* Dynamic textarea height management */
-.agent-client-chat-input-textarea.agent-client-textarea-auto-height {
-	height: auto;
-}
-
-.agent-client-chat-input-textarea.agent-client-textarea-expanded {
-	height: var(--textarea-height, auto);
-}
-
-/* Textarea wrapper for hint overlay */
-.agent-client-textarea-wrapper {
-	position: relative;
-	flex: 1;
+.agent-client-chat-input-editor .cm-editor .cm-content {
 	min-height: 80px;
-}
-
-/* Hint overlay for slash commands */
-.agent-client-hint-overlay {
-	/* Positioning - exact overlay on textarea */
-	position: absolute;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	pointer-events: none;
-	/* Match textarea properties exactly */
-	padding: 12px;
+	padding: 12px 0;
 	box-sizing: border-box;
-	font-family: inherit;
-	font-size: var(--ac-chat-font-size);
-	line-height: var(--line-height-normal);
-	/* Text wrapping */
-	white-space: pre-wrap;
-	word-wrap: break-word;
-	overflow: hidden;
+	caret-color: var(--text-normal);
 }
 
-.agent-client-hint-overlay .agent-client-invisible {
-	visibility: hidden;
+.agent-client-chat-input-editor .cm-editor .cm-line {
+	padding: 0 12px;
 }
 
-.agent-client-hint-overlay .agent-client-hint-text {
+.agent-client-chat-input-editor .cm-editor .cm-placeholder {
 	color: var(--text-faint);
+}
+
+/* Slash command argument hint, shown after the typed command */
+.agent-client-chat-input-editor .cm-editor .agent-client-hint-text {
+	color: var(--text-faint);
+	pointer-events: none;
+}
+
+/* Inline code: a chip, with faint backticks */
+.agent-client-chat-input-editor .cm-editor .agent-client-code {
+	font-family: var(--font-monospace);
+	font-size: var(--code-size);
+	color: var(--code-normal);
+	background-color: var(--code-background);
+	-webkit-box-decoration-break: clone;
+	box-decoration-break: clone;
+}
+
+.agent-client-chat-input-editor .cm-editor .agent-client-code-start {
+	border-start-start-radius: var(--code-radius);
+	border-end-start-radius: var(--code-radius);
+	padding-inline-start: 0.2em;
+}
+
+.agent-client-chat-input-editor .cm-editor .agent-client-code-end {
+	border-start-end-radius: var(--code-radius);
+	border-end-end-radius: var(--code-radius);
+	padding-inline-end: 0.2em;
+}
+
+.agent-client-chat-input-editor .cm-editor .agent-client-code-delim {
+	color: var(--text-faint);
+}
+
+/* Fenced block: full-width monospace lines */
+.agent-client-chat-input-editor .cm-editor .agent-client-code-block {
+	font-family: var(--font-monospace);
+	font-size: var(--code-size);
+	background-color: var(--code-background);
 }
 
 /* Input Actions Container */

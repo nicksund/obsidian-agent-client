@@ -15,6 +15,7 @@ import { ChatContextProvider } from "./ChatContext";
 
 // Component imports
 import { ChatPanel, type ChatPanelCallbacks } from "./ChatPanel";
+import { focusChatInput } from "./ChatInputEditor";
 
 // Service imports
 import { VaultService } from "../services/vault-service";
@@ -179,12 +180,7 @@ export class FloatingViewContainer implements IChatViewContainer {
 		}
 		// Focus after next render (expansion may need a frame)
 		window.requestAnimationFrame(() => {
-			const textarea = this.containerRefEl?.querySelector(
-				"textarea.agent-client-chat-input-textarea",
-			);
-			if (textarea instanceof HTMLTextAreaElement) {
-				textarea.focus();
-			}
+			focusChatInput(this.containerRefEl);
 		});
 	}
 
